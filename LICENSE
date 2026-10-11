@@ -2,9 +2,31 @@ MIT License
 
 Copyright (c) 2026 baoxiaohanly-cmd
 
+## Scope
+
+This license applies ONLY to the following original files of this project:
+
+- codec.js
+- gm-shim.js
+- background.js
+- manifest.json
+- test/
+- .github/
+- README.md, ATTRIBUTION.md and this LICENSE file
+
+It does NOT apply to:
+
+- immersive.js — derived from the publicly distributed userscript of
+  Immersive Translate (https://immersivetranslate.com). All rights reserved
+  by its respective owners. See ATTRIBUTION.md.
+- tm-require.js — from Tampermonkey/utils
+  (https://github.com/Tampermonkey/utils). See ATTRIBUTION.md.
+- icons/icon128.png — official Immersive Translate favicon.
+
+## Terms
+
 Permission is hereby granted, free of charge, to any person obtaining a copy
-of the shim-layer software in this repository (gm-shim.js, background.js,
-manifest.json and related documentation), to deal in the Software without
+of the software covered by the scope above, to deal in the Software without
 restriction, including without limitation the rights to use, copy, modify,
 merge, publish, distribute, sublicense, and/or sell copies of the Software,
 and to permit persons to whom the Software is furnished to do so, subject to
@@ -20,11 +42,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-Attribution notice: the translation core (immersive.js) in this repository is
-derived from the publicly distributed userscript of Immersive Translate
-(https://immersivetranslate.com). All rights to that code belong to its
-respective owners. This project does not modify or circumvent any paid
-features of the original product.

@@ -39,14 +39,19 @@
 ```
 immersive.js (官方用户脚本，去除元数据头)
     ↓ 调用 GM_* API
+codec.js (请求体编解码：Blob/File/FormData/ArrayBuffer ↔ base64 JSON，三处共用)
+    ↓
 gm-shim.js (垫片：GM API → Chrome 原生能力)
     ├── GM_xmlhttpRequest → background 中转 fetch（绕过页面 CORS，支持流式）
+    │   └── 请求 ID 全局唯一（实例前缀+序号），请求体显式编码传输
     ├── GM_getValue/setValue → chrome.storage.local
     ├── GM_addValueChangeListener → chrome.storage.onChanged
     ├── GM_openInTab → chrome.tabs.create
     ├── GM_registerMenuCommand → 扩展图标右键菜单
     └── GM_addStyle / GM_addElement → DOM 操作
 background.js (Service Worker：网络代理、标签页、右键菜单)
+    ├── 请求按 tabId:frameId:id 隔离管理，回包按 frameId 定向投递（多 frame 不串扰）
+    └── 右键菜单只在安装/更新时重建，SW 唤醒不清理
 ```
 
 文件说明：
@@ -54,17 +59,21 @@ background.js (Service Worker：网络代理、标签页、右键菜单)
 | 文件 | 说明 |
 |------|------|
 | `manifest.json` | MV3 清单 |
-| `immersive.js` | 沉浸式翻译官方用户脚本 v1.33.3（去元数据头） |
-| `gm-shim.js` | Tampermonkey GM API 垫片（本项目原创） |
-| `background.js` | Service Worker：请求代理与菜单（本项目原创） |
+| `immersive.js` | 沉浸式翻译官方用户脚本 v1.33.3（去元数据头，非 MIT，见 ATTRIBUTION.md） |
+| `codec.js` | 请求体编解码（本项目原创，MIT） |
+| `gm-shim.js` | Tampermonkey GM API 垫片（本项目原创，MIT） |
+| `background.js` | Service Worker：请求代理与菜单（本项目原创，MIT） |
 | `tm-require.js` | Tampermonkey 官方 XHR 并行补丁（非 TM 环境自动跳过） |
+| `test/` | 单测（`node --test test/`） |
+| `.github/workflows/ci.yml` | CI：语法检查、manifest 校验、GM API 覆盖率、单测 |
 
 ## ⚠️ 声明
 
-- 翻译核心代码 (`immersive.js`) 版权归沉浸式翻译 (Immersive Translate) 官方所有，取自其公开发布的用户脚本；垫片层代码 (`gm-shim.js`、`background.js`) 为本项目原创，采用 MIT 协议
+- 翻译核心代码 (`immersive.js`) 版权归沉浸式翻译 (Immersive Translate) 官方所有，取自其公开发布的用户脚本，**不受 MIT 许可覆盖**；垫片层代码 (`codec.js`、`gm-shim.js`、`background.js` 等) 为本项目原创，采用 MIT 协议。详见 [LICENSE](LICENSE) 与 [ATTRIBUTION.md](ATTRIBUTION.md)
 - 本项目仅为技术学习与便利安装目的，不修改、不破解原版任何付费功能；Pro 会员鉴权由官方服务端判定
 - 使用官方翻译服务时，文本会经过沉浸式翻译服务器；介意者请使用自配 LLM API 模式
 
 ## 📝 更新日志
 
 - **v1.33.3** (2026-10-11)：首个独立版发布，基于官方用户脚本 v1.33.3
+- **修复** (2026-10-11)：请求 ID 全局唯一 + 按 frame 定向回传；Blob/FormData 显式编解码；右键菜单生命周期修复；新增 CI 与单测；厘清授权范围

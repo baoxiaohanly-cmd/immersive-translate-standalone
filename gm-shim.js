@@ -57,9 +57,12 @@
     }
   };
 
-  /* ---------------- 网络：经由 background service worker 转发（绕过页面 CORS） ---------------- */
+  /* ---------------- 网络：经由 background service worker 转发（绕过页面 CORS） ----------------
+   * 请求 ID 格式：<8位随机实例前缀>-<序号>，同一标签页内多 frame 也不会碰撞。
+   * 回包由 background 按 frameId 定向投递，本 frame 只认自己的 ID。 */
   let __xhrSeq = 0;
-  const __xhrPending = new Map(); // id -> { details, accText }
+  const __xhrInstance = Math.random().toString(36).slice(2, 10);
+  const __xhrPending = new Map(); // id -> { details, accText, aborted }
 
   function __sendToBackground(msg) {
     try { chrome.runtime.sendMessage(msg); } catch (e) {}
@@ -75,30 +78,37 @@
   function __buildXhrShim() {
     return function (details) {
       details = details || {};
-      const id = ++__xhrSeq;
-      __xhrPending.set(id, { details: details, accText: '' });
+      const id = __xhrInstance + '-' + (++__xhrSeq);
+      const state = { details: details, accText: '', aborted: false };
+      __xhrPending.set(id, state);
 
-      // data 直传：chrome.runtime.sendMessage 使用结构化克隆，
-      // 天然支持 string / Blob / File / FormData / ArrayBuffer
-      const data = details.data == null ? null : details.data;
+      // 请求体显式编码为可 JSON 序列化结构（见 codec.js），不依赖消息通道的结构化克隆语义
+      const codec = globalThis.ITCodec;
+      Promise.resolve()
+        .then(() => codec.encodeBody(details.data == null ? null : details.data))
+        .then((encoded) => {
+          if (state.aborted || !__xhrPending.has(id)) return;
+          __sendToBackground({
+            type: 'IT_XHR',
+            id: id,
+            method: (details.method || 'GET').toUpperCase(),
+            url: details.url,
+            headers: details.headers || {},
+            body: encoded,
+            anonymous: !!details.anonymous,
+            timeout: details.timeout || 0,
+            responseType: details.responseType || ''
+          });
+        })
+        .catch(() => {
+          __xhrPending.delete(id);
+          try { details.onerror && details.onerror({ status: 0, statusText: 'encode-error', responseText: '', finalUrl: details.url }); } catch (e) {}
+        });
 
-      __sendToBackground({
-        type: 'IT_XHR',
-        id: id,
-        method: (details.method || 'GET').toUpperCase(),
-        url: details.url,
-        headers: details.headers || {},
-        data: data,
-        anonymous: !!details.anonymous,
-        timeout: details.timeout || 0,
-        responseType: details.responseType || ''
-      });
-
-      let aborted = false;
       return {
         abort: function () {
-          if (aborted) return;
-          aborted = true;
+          if (state.aborted) return;
+          state.aborted = true;
           __xhrPending.delete(id);
           __sendToBackground({ type: 'IT_XHR_ABORT', id: id });
           try { details.onabort && details.onabort({ status: 0, statusText: 'abort' }); } catch (e) {}
